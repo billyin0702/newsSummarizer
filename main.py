@@ -22,6 +22,7 @@ def command_prompt():
     print("1 - Get articles from a news website. [add to existing articles]")
     print("2 - Download articles searched into the 'articles' folder.")
     print("3 - Summarize a selected article searched")
+    print("4 - View all articles that have been searched")
     print("")
     
     user_input = input("> ")
@@ -49,6 +50,11 @@ while (global_input != "exit"):
         main_func.downloadArticles()
     elif global_input == "3":
         main_func.summarizeArticle()
+    elif global_input == "4":
+        main_func.viewAllSearchedArticles()
+    else:
+        print("Invalid command, please try again.")
+        continue
         
         
         

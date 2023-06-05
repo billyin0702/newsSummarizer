@@ -1,14 +1,23 @@
 # IMPORTS
+print("[IMPORT] Importing necessary libraries...")
+
 import requests
 import json
 import os
+import openai
+import pickle
 
 from datetime import date
 from datetime import timedelta
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-
 from summarizer import Summarizer
+
+import tensorflow as tf
+import tensorflow_hub as hub
+
+
+print("[IMPORT] Imported necessary libraries.")
 
 
 # This will be an exportable class that we can use for obtaining the articles from the news websites.
@@ -18,10 +27,26 @@ class ArticleGet:
         
         print("[STARTING] Initializing Start Up Sequence....")
         
+        # First, see if pickle file exists with the articles list, if it does, load it
         self.articles = []
+        
+        if os.path.exists("articles.pickle"):
+            print("Loading articles from pickle file...")
+            with open("articles.pickle", "rb") as file:
+                self.articles = pickle.load(file)
+        
         self.api_key = "acc674d8efa142fa80bdc9cd72090a1e"
         self.summarize_model = Summarizer()
         self.summary_size = {"short": 3, "medium": 5, "long": 7}
+        
+        self.openai_max_tokens = {"short": 100, "medium": 200, "long": 300}
+        self.openai_temperature_user = 0.7 
+        self.openai_key = os.getenv("OPENAI_TOKEN")
+        self.openai_model_name = 'text-davinci-003'
+        self.openai_presence_penalty = 0.3
+        
+        self.use_module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
+        self.use_model = hub.load(self.use_module_url)        
         
         print("[STARTING] Start Up Sequence Complete.")
     
@@ -167,9 +192,46 @@ class ArticleGet:
 
         return urls, authors, titles, sources
     
+    # [HELPER] Naive summarizer using sentence similarity analysi from USE
+    def naiveSummarizer(self, title, content, n):
+        
+        # First split content by sentences
+        sentences = content.split(".")
+        sentences_with_scores = []
+        ret = ""
+        
+        # Now, analyze the similarity between the title and each sentence
+        for sentence in sentences:
+            
+            # Get the similarity score
+            embeddings = self.use_model([sentence, title])
+            similarity = tf.keras.losses.cosine_similarity(embeddings[0], embeddings[1]).numpy() * -1
+            
+            # Add the sentence and score to the list
+            sentences_with_scores.append((sentence, similarity))
+            
+        # Now sort the sentences by their similarity score
+        sentences_with_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        # Now get the top sentences
+        for item in sentences_with_scores[:n]:
+            ret += item[0] + "."
+            
+        # Remove the white space
+        ret = ret.lstrip(" ")
+            
+        return ret
+    
+    
     # FUNCTION 0: Clear all the articles from the search results
     def clearArticles(self):
         self.articles = []
+        
+        # remove the pickle file on clear if it exists
+        if os.path.exists("articles.pickle"):
+            print("Removing articles.pickle file...")
+            os.remove("articles.pickle")
+        
                 
     # FUNCTION 1: Fetch the articles content from the new website using HTTP requests by scrapping the URL
     def fetchArticleAllContent(self, keywords, domains, date_from, date_to, sortBy="relevancy", lang="en"):
@@ -197,7 +259,7 @@ class ArticleGet:
             
             # Check if the request was successful
             if resposne.status_code != 200:
-                print("Error: Request was unsuccessful.")
+                print(f"Error: Request was unsuccessful to {url}")
                 continue
             
             # Now parse the response into a BeautifulSoup object
@@ -215,6 +277,10 @@ class ArticleGet:
             # Now write each article into a file in a folder called "articles"
             self.articles.append([title, author, source, content])
             
+        # Lastly, add the data to pickle file
+        with open("articles.pickle", "wb") as file:
+            pickle.dump(self.articles, file)
+            
             
             
     # FUNCTION 2: DOWNLOAD THE ARTICLES
@@ -230,10 +296,10 @@ class ArticleGet:
     def summarizeArticle(self):
         
         # First, query the user to select an article
-        print("\nPlease select an article to summarize:")
+        print("\nPlease select an article to summarize by entering its number:")
         
         for i, article in enumerate(self.articles):
-            print(f"{i+1} - [{article[2]}]: {article[0]}]")
+            print(f"{i+1} - [{article[2]}]: {article[0]}")
             
         # Now get the user input
         user_input = input("> ")
@@ -257,7 +323,7 @@ class ArticleGet:
         
         while not user_input_valid:
         
-            print("\nPlease select the size of the summary: (short, medium, long)")
+            print("\n\nPlease select the size of the summary: (short, medium, long)")
             user_input = input("> ")
             
             # Check if the input is valid
@@ -266,18 +332,64 @@ class ArticleGet:
                 return
             
             user_input_valid = True
+            
+        body = article[3] # Get the body of the article
+            
+        # Now summarize the article using the naive summarizer
+        body_summary = self.naiveSummarizer(article[0], body, n=self.summary_size[user_input])
         
-        # Now summarize the article
-        body = article[3]
-        body_summary = self.summarize_model(body, num_sentences=self.summary_size[user_input])
-        
-        # Print out the summary
-        print(f"\nSummary for '{article[0]}':")
-        print("-------------------------------------------------------------------")
+        # Print out the summary [naive]
+        print(f"\nSummary for '{article[0]}' using naive summarizer:")
+        print("---------------------------------------------------------------------------------")
         print(body_summary)
         
+        # Now summarize the article using BERT
+        body_summary = self.summarize_model(body, num_sentences=self.summary_size[user_input])
+        body_summary = "".join(body_summary)
+        
+        # Print out the summary [BERT]
+        print(f"\n\nSummary for '{article[0]}' using BERT:")
+        print("---------------------------------------------------------------------------------")
+        print(body_summary)
+        
+        # Now summarize the article using OpenAI
+        if self.openai_key != None:
+            
+            # modify body for OPENAI summarizer
+            body += "\nTl:dr"
+            
+            openai.api_key = self.openai_key # Set the API key
+            output = openai.Completion.create(
+                        engine=self.openai_model_name,
+                        prompt=body,
+                        max_tokens=self.openai_max_tokens[user_input],
+                        temperature=self.openai_temperature_user,
+                        n=1,
+                        stop=None,
+                        presence_penalty=self.openai_presence_penalty,
+                    )
+            
+                    # Print out the summary
+            print(f"\n\nSummary for '{article[0]}' using OPENAI's {self.openai_model_name}:")
+            print("---------------------------------------------------------------------------------")
+            print(output.choices[0].text.strip())
+            
+        else:
+            print("OpenAI API key is not set, skipping OpenAI summary... (please use your own API key)")
+            
         # Wait for user input to continue
         input("\nPress enter to continue...")
+        
+        
+    # FUNCTION 4: VIEW ALL SEARCHED ARTICLES
+    def viewAllSearchedArticles(self):
+        
+        if len(self.articles) == 0:
+            print("No articles have been searched yet...")
+            return
+        
+        for i, article in enumerate(self.articles):
+            print(f"{i+1} - [{article[2]}]: {article[0]}")
         
             
                 

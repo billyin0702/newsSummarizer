@@ -182,3 +182,7 @@ class MainFunctionalities:
     # [3] Function for summarizing the articles from the news website
     def summarizeArticle(self):
         self.ag.summarizeArticle()  
+        
+    # [4] View all articles that have been searched
+    def viewAllSearchedArticles(self):
+        self.ag.viewAllSearchedArticles()
