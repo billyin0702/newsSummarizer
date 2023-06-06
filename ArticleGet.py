@@ -216,7 +216,7 @@ class ArticleGet:
         
         # Now get the top sentences
         for item in sentences_with_scores[:n]:
-            ret += item[0] + "."
+            ret += item[0] + ". "
             
         # Remove the white space
         ret = ret.lstrip(" ")

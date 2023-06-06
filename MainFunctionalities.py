@@ -7,7 +7,7 @@ class MainFunctionalities:
     def __init__(self):
         self.ag = ArticleGet()
         self.apiKey = "acc674d8efa142fa80bdc9cd72090a1e"
-        self.nlp = spacy.load('en_core_web_sm')
+        # self.nlp = spacy.load('en_core_web_sm')
         
     def test(self):
         self.ag.test()
