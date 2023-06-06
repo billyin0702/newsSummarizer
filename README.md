@@ -7,6 +7,11 @@ When starting, please install all dependencies by running the following line in 
 pip install -r requirements.txt
 ```
 
+If this command does not work, please try running the following line in your project directory to install the packages one by one...
+```
+pip install openai pickle bs4 requests tqdm bert-extractive-summarizer tensorflow tensorflow_hub 
+```
+
 ## Running the program
 To run the program, please run the following line in your project directory...
 ```
@@ -27,3 +32,9 @@ In order to see data from the OpenAI model, you will need to have your own OpenA
 ```
 export OPENAI_TOKEN=<your key here>
 ```
+
+
+#### Quest details
+- To activate the virtual environment, run 'conda activate bill_news'
+- To deactivate the virtual environment, run 'conda deactivate'
+- On Quest, computation could be a little slower, you may have to wait a while
