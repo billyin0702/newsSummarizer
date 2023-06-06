@@ -1,6 +1,6 @@
 from datetime import datetime
 from ArticleGet import ArticleGet
-import spacy
+# import spacy
 
 class MainFunctionalities:
     
