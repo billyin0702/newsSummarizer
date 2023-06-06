@@ -35,6 +35,6 @@ export OPENAI_TOKEN=<your key here>
 
 
 #### Quest details
-- To activate the virtual environment, run 'conda activate bill_news'
-- To deactivate the virtual environment, run 'conda deactivate'
+- To activate the virtual environment, run ```conda activate bill_news```
+- To deactivate the virtual environment, run ```conda deactivate```
 - On Quest, computation is exponentially slower compared to my local machine. So for the summary to compute, you may have to wait a while, especially when using the bert-extractive-summarizer model
