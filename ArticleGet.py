@@ -40,10 +40,10 @@ class ArticleGet:
         self.summary_size = {"short": 3, "medium": 5, "long": 7}
         
         self.openai_max_tokens = {"short": 100, "medium": 200, "long": 300}
-        self.openai_temperature_user = 0.7 
+        self.openai_temperature_user = 0.3 
         self.openai_key = os.getenv("OPENAI_TOKEN")
         self.openai_model_name = 'text-davinci-003'
-        self.openai_presence_penalty = 0.3
+        self.openai_presence_penalty = 0.5
         
         self.use_module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
         self.use_model = hub.load(self.use_module_url)        
@@ -208,6 +208,7 @@ class ArticleGet:
             similarity = tf.keras.losses.cosine_similarity(embeddings[0], embeddings[1]).numpy() * -1
             
             # Add the sentence and score to the list
+            sentence = sentence.strip()
             sentences_with_scores.append((sentence, similarity))
             
         # Now sort the sentences by their similarity score
