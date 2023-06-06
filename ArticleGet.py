@@ -376,7 +376,7 @@ class ArticleGet:
             print(output.choices[0].text.strip())
             
         else:
-            print("OpenAI API key is not set, skipping OpenAI summary... (please use your own API key)")
+            print("\n\nOpenAI API key is not set, skipping OpenAI summary... (please use your own API key)")
             
         # Wait for user input to continue
         input("\nPress enter to continue...")
